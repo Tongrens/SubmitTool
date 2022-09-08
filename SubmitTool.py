@@ -134,3 +134,4 @@ if __name__ == '__main__':
     main = GetToken()
     main.main()
     input('按回车退出...')
+ 
