@@ -29,14 +29,9 @@ class SubmitTool:
                 self.req_info.append({"field_name": i['field_name'], "field_value": self.extra_info[i['field_name']],
                                       "field_key": i["field_key"]})
             else:
-                if i['field_name'] == "电话":
-                    tmp = self.extra_info['手机号']
-                elif i['field_name'] == "手机号":
-                    tmp = self.extra_info['电话']
-                else:
-                    print(i['field_name'] + '已提交为123456789，请后续自行更改内容')
-                    tmp = '123456789'
-                    # tmp = input('请输入' + i['field_name'] + '：')
+                print(i['field_name'] + '已提交为123456789，请后续自行更改内容')
+                tmp = '123456789'
+                # tmp = input('请输入' + i['field_name'] + '：')
                 self.req_info.append({"field_name": i['field_name'], "field_value": tmp, "field_key": i["field_key"]})
         if self.req_info:
             return True
@@ -133,5 +128,5 @@ class GetToken:
 if __name__ == '__main__':
     main = GetToken()
     main.main()
+    os.remove('qr.jpg')
     input('按回车退出...')
- 
