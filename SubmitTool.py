@@ -85,11 +85,12 @@ class GetToken:
         with open('qr.jpg', 'wb') as f:
             f.write(base64.b64decode(img))  # 写入qr码以便打开图片
         print('请使用微信扫码登录')
-        os.system('qr.jpg')
+        os.system('start qr.jpg')
         while True:  # 循环判断登录是否成功，未登录sta为-1，登录成功为0并返回access_token
             login_data = json.loads(requests.get(self.login_url + code).text)
             if not login_data['sta']:
                 return login_data['data']['access_token']
+            print('等待登录...')
             time.sleep(1)
 
     # 通过手机号及密码方式登录
@@ -115,7 +116,7 @@ class GetToken:
             print('请将需要提交的报名添加到个人记录中再运行程序')
             exit()
         else:
-            print('请选择需要提交的报名')
+            print('请选择需要提交的表单序号')
         for i in range(len(history_data)):
             print('序号：' + str(i + 1) + '\t\t' + '名称：' + history_data[i]['name'] + '\t\t' + '状态：' + history_data[i][
                 'status'])
