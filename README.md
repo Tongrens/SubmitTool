@@ -12,6 +12,8 @@ WeChat registration tools submit script
 
 若无法运行release的exe请尝试管理员方式运行。
 
+若提示qr.jpg被占用请尝试关闭看图软件再运行。
+
 ⚠目前程序仅能提交单行文本，提交其他内容(选择、复选等)可能报错！
 
 
