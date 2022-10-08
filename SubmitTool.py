@@ -115,13 +115,14 @@ class GetToken:
         for i in range(len(history_data)):
             print('序号：' + str(i + 1) + '\t\t' + '名称：' + history_data[i]['name'] + '\t\t' + '状态：' + history_data[i][
                 'status'])
-        user_input = int(input('请输入序号：'))
-        if user_input <= len(history_data):
-            run = SubmitTool(history_data[user_input - 1]['eid'], token)  # 选择eid并进行提交
-            run.main()
-        else:
-            print('请输入正确的序号')
-            exit()
+        while True:
+            user_input = input('请输入序号：')
+            if user_input.isnumeric() and 0 < int(user_input) <= len(history_data):
+                run = SubmitTool(history_data[int(user_input) - 1]['eid'], token)  # 选择eid并进行提交
+                run.main()
+                break
+            else:
+                print('请输入正确的序号')
 
 
 # 主入口
