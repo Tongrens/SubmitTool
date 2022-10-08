@@ -7,7 +7,7 @@ import requests
 
 class SubmitTool:
     def __init__(self, eid, access_token):
-        self.extra_info, self.req_info = {}, []
+        self.extra_info, self.req_info, self.out_info = {}, [], ''
         self.main_url = 'https://api-xcx-qunsou.weiyoubot.cn'
         self.access_token = access_token
         self.eid = eid
@@ -29,7 +29,7 @@ class SubmitTool:
                 self.req_info.append({"field_name": i['field_name'], "field_value": self.extra_info[i['field_name']],
                                       "field_key": i["field_key"]})
             else:
-                print(i['field_name'] + '已提交为123456789，请后续自行更改内容')
+                self.out_info += i['field_name'] + '已提交为123456789，请后续自行更改内容' + '\n'
                 tmp = '123456789'
                 # tmp = input('请输入' + i['field_name'] + '：')
                 self.req_info.append({"field_name": i['field_name'], "field_value": tmp, "field_key": i["field_key"]})
@@ -45,6 +45,7 @@ class SubmitTool:
                 "on_behalf": 0, "items": [], "referer": "", "fee_type": ""}
         return_info = json.loads(requests.post(post_url, json=body).text)
         if not return_info['sta']:  # 提交成功返回的sta为0，不成功为-1
+            print(self.out_info[:-1])
             print('提交成功')
             return True
         else:
@@ -60,9 +61,8 @@ class SubmitTool:
         self.get_user_info()
         while True:
             if self.get_info():  # 判断获取需要提交的数据是否为空(未开始的数据为空)
-                if not self.post():  # 不为空就进行提交，若提交成功或超过限制则结束，否则再次获取需要提交的数据并进行提交
-                    continue
-                break
+                if self.post():  # 若提交成功或超过限制则结束，否则再次获取需要提交的数据并进行提交
+                    break
             else:
                 print('报名未开始')
 
