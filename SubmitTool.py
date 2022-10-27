@@ -23,7 +23,12 @@ class SubmitTool:
     def get_info(self):
         get_info_url = self.main_url + '/xcx/enroll/v2/detail?eid=' + self.eid + '&access_token=' + self.access_token \
                        + '&admin=0&from=detail&referer= '
-        info = json.loads(requests.get(get_info_url).text)  # 获取提交的数据
+        try:
+            info = json.loads(requests.get(get_info_url).text)  # 获取提交的数据
+        except json.decoder.JSONDecodeError:
+            print('获取数据失败，将再次获取')
+            return False
+        print(info)
         for i in info['data']['req_info']:
             if i['field_name'] in self.extra_info:
                 self.req_info.append({"field_name": i['field_name'], "field_value": self.extra_info[i['field_name']],
