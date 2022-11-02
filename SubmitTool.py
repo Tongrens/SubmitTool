@@ -18,6 +18,23 @@ class SubmitTool:
         user_info = json.loads(requests.get(get_user_info_url).text)
         for i in user_info['data']['extra_info']:
             self.extra_info[i['name']] = i['value']
+        print('当前已保存用户信息：')
+        for i in self.extra_info:
+            print(i + '：' + self.extra_info[i])
+        if input('是否需要添加用户信息？(y/n)').lower() == 'y':
+            print('请输入需要添加的信息(eg:\'姓名:张三\'),输入\'end\'结束')
+            while True:
+                tmp = input()
+                if tmp == 'end':
+                    break
+                else:
+                    if ':' in tmp:
+                        self.extra_info[tmp.split(':')[0]] = tmp.split(':')[1]
+                    else:
+                        print('输入格式错误')
+            print('当前已保存用户信息：')
+            for i in self.extra_info:
+                print(i + '：' + self.extra_info[i])
 
     # 获取需要提交的数据并制作提交的字典(req_info)
     def get_info(self):
@@ -28,7 +45,6 @@ class SubmitTool:
         except json.decoder.JSONDecodeError:
             print('获取数据失败，将再次获取')
             return False
-        print(info)
         for i in info['data']['req_info']:
             if i['field_name'] in self.extra_info:
                 self.req_info.append({"field_name": i['field_name'], "field_value": self.extra_info[i['field_name']],
@@ -51,7 +67,7 @@ class SubmitTool:
         return_info = json.loads(requests.post(post_url, json=body).text)
         if not return_info['sta']:  # 提交成功返回的sta为0，不成功为-1
             print(self.out_info[:-1])
-            print('提交成功')
+            print(time.strftime("%H:%M:%S", time.localtime()) + '提交成功')
             return True
         else:
             if return_info['msg'] == '提交次数超过限制':  # 超过限制为已提交，不需要再次运行
