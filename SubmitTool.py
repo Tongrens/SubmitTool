@@ -38,7 +38,7 @@ class SubmitTool:
 
     # 获取需要提交的数据并制作提交的字典(req_info)
     def get_info(self):
-        get_info_url = self.main_url + '/xcx/enroll/v2/detail?eid=' + self.eid + '&access_token=' + self.access_token \
+        get_info_url = self.main_url + '/xcx/enroll/v3/detail?eid=' + self.eid + '&access_token=' + self.access_token \
                        + '&admin=0&from=detail&referer= '
         try:
             info = json.loads(requests.get(get_info_url).text)  # 获取提交的数据
@@ -50,8 +50,8 @@ class SubmitTool:
                 self.req_info.append({"field_name": i['field_name'], "field_value": self.extra_info[i['field_name']],
                                       "field_key": i["field_key"]})
             else:
-                self.out_info += i['field_name'] + '已提交为123456789，请后续自行更改内容' + '\n'
-                tmp = '123456789'
+                self.out_info += i['field_name'] + '已提交为12345678910，请后续自行更改内容' + '\n'
+                tmp = '12345678910'
                 # tmp = input('请输入' + i['field_name'] + '：')
                 self.req_info.append({"field_name": i['field_name'], "field_value": tmp, "field_key": i["field_key"]})
         if self.req_info:
@@ -130,7 +130,7 @@ class GetToken:
                 history_data.append({'name': i['title'], 'status': '进行中' if i['status'] else '未开始', 'eid': i['eid']})
         if not history_data:
             print('请将需要提交的报名添加到个人记录中再运行程序')
-            exit()
+            return
         else:
             print('请选择需要提交的表单序号')
         for i in range(len(history_data)):
