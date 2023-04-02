@@ -38,8 +38,7 @@ class SubmitTool:
 
     # 获取需要提交的数据并制作提交的字典(req_info)
     def get_info(self):
-        get_info_url = self.main_url + '/xcx/enroll/v3/detail?eid=' + self.eid + '&access_token=' + self.access_token \
-                       + '&admin=0&from=detail&referer= '
+        get_info_url = f'{self.main_url}/xcx/enroll/v1/req_detail?access_token={self.access_token}&eid={self.eid}'
         try:
             info = json.loads(requests.get(get_info_url).text)  # 获取提交的数据
         except json.decoder.JSONDecodeError:
@@ -52,7 +51,6 @@ class SubmitTool:
             else:
                 self.out_info += i['field_name'] + '已提交为12345678910，请后续自行更改内容' + '\n'
                 tmp = '12345678910'
-                # tmp = input('请输入' + i['field_name'] + '：')
                 self.req_info.append({"field_name": i['field_name'], "field_value": tmp, "field_key": i["field_key"]})
         if self.req_info:
             return True
