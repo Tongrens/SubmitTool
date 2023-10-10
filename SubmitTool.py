@@ -8,10 +8,11 @@ from io import BytesIO
 
 class SubmitTool:
     def __init__(self, eid, access_token):
-        self.extra_info, self.req_info, self.out_info = {}, [], ''
+        self.extra_info, self.req_info, self.auto_fill_flag = {}, [], True
         self.access_token, self.eid = access_token, eid
-        self.main_url = 'https://api-xcx-qunsou.weiyoubot.cn'
-        self.get_user_info_url = f'{self.main_url}/xcx/enroll/v1/userinfo?access_token={self.access_token}'
+        self.get_user_info_url = f'{base_url}/v1/userinfo?access_token={self.access_token}'
+        self.get_info_url = f'{base_url}/v1/req_detail?access_token={self.access_token}&eid={self.eid}'
+        self.post_url = f'{base_url}/v5/enroll'
 
     # 获取用户已保存数据(extra_info)
     def get_user_info(self):
@@ -30,17 +31,21 @@ class SubmitTool:
             print('当前已保存用户信息：')
             for i in self.extra_info:
                 print(f'{i}：{self.extra_info[i]}')
+        if input('若出现已保存信息外的内容是否提交时手动填写？(y/n)').lower() == 'y':
+            self.auto_fill_flag = False
 
     # 获取需要提交的数据并制作提交的字典(req_info)
     def get_info(self):
-        get_info_url = f'{self.main_url}/xcx/enroll/v1/req_detail?access_token={self.access_token}&eid={self.eid}'
         try:
-            info = json.loads(requests.get(get_info_url).text)  # 获取提交的数据
+            info = json.loads(requests.get(self.get_info_url).text)  # 获取提交的数据
         except json.decoder.JSONDecodeError:
             print('获取数据失败，将再次获取')
             return False
         for i in info['data']['req_info']:
-            tmp = self.extra_info[i['field_name']] if i['field_name'] in self.extra_info else '12345678910'
+            # 判断是否需要在提交时手动填写
+            tmp = self.extra_info[i['field_name']] if i['field_name'] in self.extra_info else \
+                ('12345678910' if self.auto_fill_flag else input(f"请输入{i['field_name']}："))
+            # 构造提交的字典
             self.req_info.append({"field_name": i['field_name'], "field_value": tmp,
                                   "field_key": i["field_key"]})
         return True if self.req_info else False
@@ -49,9 +54,8 @@ class SubmitTool:
     def post(self):
         body = {"access_token": self.access_token, "eid": self.eid, "info": self.req_info,
                 "on_behalf": 0, "items": [], "referer": "", "fee_type": ""}
-        return_info = json.loads(requests.post(self.main_url + '/xcx/enroll/v5/enroll', json=body).text)
+        return_info = json.loads(requests.post(self.post_url, json=body).text)
         if not return_info['sta']:  # 提交成功返回的sta为0，不成功为-1
-            print(self.out_info[:-1])
             print(time.strftime("%H:%M:%S", time.localtime()) + '提交成功')
             return True
         else:
@@ -75,10 +79,10 @@ class SubmitTool:
 
 class GetToken:
     def __init__(self):
-        self.get_qr_url = 'https://api-xcx-qunsou.weiyoubot.cn/xcx/enroll_web/v1/pc_code'
-        self.qr_login_url = 'https://api-xcx-qunsou.weiyoubot.cn/xcx/enroll_web/v1/pc_login?code='
-        self.phone_login_url = 'https://api-xcx-qunsou.weiyoubot.cn/xcx/enroll/v1/login_by_phone'
-        self.get_history_url = 'https://api-xcx-qunsou.weiyoubot.cn/xcx/enroll/v1/user/history?access_token='
+        self.get_qr_url = f'{base_url}_web/v1/pc_code'
+        self.qr_login_url = f'{base_url}_web/v1/pc_login?code='
+        self.phone_login_url = f'{base_url}/v1/login_by_phone'
+        self.get_history_url = f'{base_url}/v1/user/history?access_token='
 
     # 通过qr码方式登录
     def get_token_qr(self):
@@ -90,6 +94,7 @@ class GetToken:
         while True:  # 循环判断登录是否成功，未登录sta为-1，登录成功为0并返回access_token
             login_data = json.loads(requests.get(self.qr_login_url + code).text)
             if not login_data['sta']:
+                print('登录成功！')
                 return login_data['data']['access_token']
             print('等待登录...')
             time.sleep(1)
@@ -116,10 +121,10 @@ class GetToken:
                 break
             if login_type == '2':
                 token = self.get_token_phone()
-                if not token:
-                    return
                 break
             print('输入错误，请重新输入')
+        if not token:
+            return
         # 获取个人历史记录
         result = json.loads(requests.get(self.get_history_url + token).text)
         history_data = []
@@ -144,6 +149,7 @@ class GetToken:
 
 # 主入口
 if __name__ == '__main__':
+    base_url = 'https://api-xcx-qunsou.weiyoubot.cn/xcx/enroll'
     main = GetToken()
     main.main()
     input('按回车退出...')
