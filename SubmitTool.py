@@ -18,7 +18,11 @@ class SubmitTool:
     def get_user_info(self):
         user_info = json.loads(requests.get(self.get_user_info_url).text)
         for i in user_info['data']['extra_info']:
-            self.extra_info[i['name']] = i['value']
+            if isinstance(i['name'], list):  # 判断name是否为列表
+                for j in i['name']:
+                    self.extra_info[j] = i['value']
+            else:
+                self.extra_info[i['name']] = i['value']
         print('当前已保存用户信息：')
         for i in self.extra_info:
             print(f'{i}：{self.extra_info[i]}')
