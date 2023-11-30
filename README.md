@@ -7,7 +7,7 @@ WeChat registration tools submit script
 ⚠程序已开源，转载、二改请标明来源！  
 
 ## 网页端现已上线！！！
-网页端请访问http://tongrens.top:8001以使用脚本❗
+网页端请访问 http://tongrens.top:8001 以使用脚本❗
 
 推荐复制到微信中打开链接，扫描二维码可直接长按扫描登录❗
 
