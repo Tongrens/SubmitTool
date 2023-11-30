@@ -1,0 +1,349 @@
+{% block content %}
+
+    <!DOCTYPE html>
+    <html lang="zh">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>SubmitTool</title>
+        <style>
+            body {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                margin: 0;
+            }
+
+            #dashboard-container {
+                width: 530px;
+                height: 100%;
+                background-color: #f1f1f1;
+                border: 10px solid #4CAF50;
+                border-radius: 10px;
+            }
+
+            #header {
+                text-align: center;
+                padding: 5px;
+                background-color: #4CAF50;
+                color: white;
+            }
+
+            #eid {
+                width: 100%;
+                height: 100%;
+                background-color: #f1f1f1;
+            }
+
+            .top_div {
+                width: 100%;
+                line-height: 30px;
+                text-align: center;
+                float: left;
+                padding: 10px;
+            }
+
+            #eid .bottom_div {
+                width: 100%;
+                height: 100%;
+                line-height: 30px;
+                float: left;
+                margin-left: 85px;
+                font-size: 15px;
+            }
+
+            .editableList {
+                width: 100%;
+                height: 100%;
+                background-color: #f1f1f1;
+                text-align: center;
+            }
+
+            .editableList .input_div {
+                width: 100%;
+                height: 100%;
+                float: left;
+                font-size: 15px;
+                margin-bottom: 10px;
+            }
+
+            #text_box {
+                height: 250px;
+                background-color: white;
+                text-align: center;
+                overflow: auto;
+                font-size: 13px;
+                border: 5px solid #fff2ff;
+            }
+
+            #text_box .textbox_info {
+                text-align: left;
+                padding-left: 10px;
+                background-color: #fff2ff;
+                margin: 0;
+                height: 30px;
+                line-height: 25px;
+                font-weight: bold;
+            }
+
+            .tooltip {
+                width: 300px;
+                display: none;
+                position: absolute;
+                background-color: #f9f9f9;
+                padding: 10px;
+                border-radius: 5px;
+                box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+                z-index: 100;
+                font-size: 13px;
+                text-align: left;
+            }
+
+            .tooltip-trigger {
+                position: relative;
+                cursor: pointer;
+            }
+
+            #footer {
+                text-align: center;
+                background-color: #4CAF50;
+                color: white;
+                height: 40px;
+                line-height: 40px;
+            }
+
+        </style>
+    </head>
+    <body>
+    {% if not token %}
+        <script>
+            alert("请先登录")
+            window.location.href = "/login"
+        </script>
+    {% endif %}
+    <div id="dashboard-container">
+        <div id="header">
+            <p style="margin: 0; padding: 10px 0 15px">微信报名工具提交脚本</p>
+        </div>
+        <div id="eid">
+            <form id="dataForm">
+                {% csrf_token %}
+
+                {% if history_data %}
+                    <div class="top_div">
+                        <span>请选择需要提交的报名：</span>
+                    </div>
+                    <div class="bottom_div">
+                        {% for item in history_data %}
+                            <div>
+                                <label>
+                                    <input type="radio" name="selectedData"
+                                           value="{{ item.eid }}">{{ item.status }}: {{ item.name }}
+                                </label>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <script>
+                        alert("请将需要提交的报名添加到个人记录中再重新登录")
+                        window.location.href = "/login"
+                    </script>
+                {% endif %}
+            </form>
+        </div>
+
+        <div class="editableList">
+            <!-- 初始化已有的数据 -->
+            <div class="top_div">
+                <span>请确认已保存信息：</span>
+            </div>
+            {% for key, value in extra_info.items %}
+                <div class="input_div">
+                    <label>
+                        <input type="text" name="name" value="{{ key }}" placeholder="Name">
+                        <input type="text" name="value" value="{{ value }}" placeholder="Value">
+                    </label>
+                    <button onclick="removeItem(this)">删除此条</button>
+                </div>
+            {% endfor %}
+            <!-- 新增数据的模板 -->
+            <div id="template" class="input_div" style="display: none;">
+                <label>
+                    <input type="text" name="name" placeholder="Name">
+                    <input type="text" name="value" placeholder="Value">
+                </label>
+                <button onclick="removeItem(this)">删除此条</button>
+            </div>
+        </div>
+        <button style="display: block;margin: 0 auto" onclick="addItem()">新增一条</button>
+
+        <div id="container_info" style="text-align: right; padding: 10px">
+            <label>
+                <input type="checkbox" name="fill_flag" value=True>若出现已保存信息外的内容是否提交时手动填写
+                <span class="tooltip-trigger">❔</span>
+                <div class="tooltip" id="myTooltip">
+                    为避免出现提交后管理员不可修改的情况，可选择此复选框，若报名时出现已保存信息外的选项，提交时会弹出手动填写的窗口
+                </div>
+            </label>
+        </div>
+        <button id="submitbtn" style="display: block;margin: 10px auto" onclick="submitForm()">提交</button>
+        <div id="text_box">
+            <p class="textbox_info">信息输出框：</p>
+        </div>
+        <div id="footer">
+            Powered by <a href="https://github.com/Tongrens/SubmitTool">Tongrens</a>
+        </div>
+    </div>
+    <script>
+        const tooltipTrigger = document.querySelector('.tooltip-trigger');
+        const tooltip = document.getElementById('myTooltip');
+        tooltipTrigger.addEventListener('mouseover', function () {
+            tooltip.style.display = 'block';
+            const tooltipTriggerRect = tooltipTrigger.getBoundingClientRect();
+            const tooltipTriggerCenter = tooltipTriggerRect.left + tooltipTriggerRect.width / 2;
+            tooltip.style.top = (tooltipTriggerRect.bottom + window.scrollY) + 5 + 'px';
+            tooltip.style.left = (tooltipTriggerCenter - tooltip.offsetWidth / 2) + 'px';
+
+        });
+        tooltipTrigger.addEventListener('mouseout', function () {
+            tooltip.style.display = 'none';
+        });
+
+        function submitForm() {
+            const selectedValue = document.querySelector('input[name="selectedData"]:checked');
+            if (selectedValue) {
+                // 获取选中的值，可以进行后续处理，比如发送到后端
+                // 构建字典
+                const extra_info = {};
+                let auto_fill_flag = false;
+                if (document.querySelector('input[name="fill_flag"]:checked')) {
+                    auto_fill_flag = true;
+                }
+                const items = document.querySelectorAll('.editableList > div');
+                items.forEach(function (item) {
+                    const nameInput = item.querySelector('input[name="name"]');
+                    const valueInput = item.querySelector('input[name="value"]');
+                    if (nameInput && valueInput) {
+                        const name = nameInput.value.trim();
+                        const value = valueInput.value.trim();
+                        if (name !== '' && value !== '') {
+                            extra_info[name] = value;
+                        }
+                    }
+                });
+                const eid = selectedValue.value;
+                const token = '{{ token }}';
+                console.log('Token:', token);
+                console.log('EID:', eid);
+                console.log('User data:', extra_info);
+                console.log('Auto fill flag:', auto_fill_flag);
+                document.getElementById('submitbtn').style.display = 'none';
+                const submit_info = document.createElement('p');
+                submit_info.innerText = '提交中...';
+                submit_info.style.textAlign = 'right';
+                submit_info.style.paddingRight = '20px';
+                document.getElementById('container_info').appendChild(submit_info);
+                sendDataToBackend({token, eid, extra_info, auto_fill_flag});
+            } else {
+                alert("请选择一个要提交的报名");
+                return false;
+            }
+        }
+
+        function addItem() {
+            // 克隆模板并显示
+            const template = document.getElementById('template');
+            const newItem = template.cloneNode(true);
+            newItem.style.display = 'block';
+            // 将新元素添加到列表
+            document.getElementsByClassName('editableList')[0].appendChild(newItem);
+        }
+
+        function removeItem(button) {
+            // 删除父元素
+            const item = button.parentNode;
+            item.parentNode.removeChild(item);
+        }
+
+        function addInfo(info) {
+            // 增加输出信息
+            const newInfo = document.createElement('p');
+            newInfo.innerText = info;
+            newInfo.style.textAlign = 'center';
+            document.getElementById('text_box').appendChild(newInfo);
+        }
+
+        function sendDataToBackend(data) {
+            // 使用Ajax发送数据到后端
+            fetch('/submit/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    const sta = data.sta;
+                    const msg = data.msg;
+                    const old_data = data.data;
+                    console.log('sta:', sta, 'msg:', msg);
+                    if (sta === true) {
+                        if (msg === '活动期间，只允许提交1次') {
+                            console.log('活动期间，只允许提交1次');
+                            addInfo('活动期间，只允许提交1次')
+                        } else if (msg === '需要手动填写信息') {
+                            console.log('需要手动填写信息！！！');
+                            addInfo('需要手动填写信息！！！')
+                            const need_fill = data.need_fill;
+                            const items = document.createElement('div');
+                            items.setAttribute('class', 'editableList')
+                            for (let i = 0; i < need_fill.length; i++) {
+                                const item = document.createElement('div');
+                                const label = document.createElement('label');
+                                const name = document.createElement('input');
+                                const value = document.createElement('input');
+                                name.setAttribute('type', 'text');
+                                name.setAttribute('name', 'name');
+                                name.setAttribute('placeholder', 'Name');
+                                name.setAttribute('value', need_fill[i]);
+                                value.setAttribute('type', 'text');
+                                value.setAttribute('name', 'value');
+                                value.setAttribute('placeholder', 'Value');
+                                label.appendChild(name);
+                                label.appendChild(value);
+                                item.appendChild(label);
+                                items.appendChild(item);
+                            }
+                            document.getElementById('text_box').appendChild(items);
+                            const submit = document.createElement('button');
+                            submit.setAttribute('onclick', 'submitForm()');
+                            submit.setAttribute('style', 'display: block;margin: 10px auto')
+                            submit.innerText = '提交';
+                            document.getElementById('text_box').appendChild(submit);
+                        } else {
+                            console.log('提交成功');
+                            addInfo('提交成功');
+                            const text_box = document.getElementById('text_box');
+                            text_box.scrollTop = text_box.scrollHeight;
+                        }
+                    } else {
+                        if (msg === '报名未开始') {
+                            console.log('报名未开始');
+                            addInfo('报名未开始');
+                        } else {
+                            console.log('提交失败：', msg);
+                            addInfo('提交失败：' + msg);
+                        }
+                        const text_box = document.getElementById('text_box');
+                        text_box.scrollTop = text_box.scrollHeight;
+                        setTimeout(sendDataToBackend(old_data), 500);
+                    }
+                });
+        }
+    </script>
+
+    </body>
+    </html>
+
+{% endblock %}

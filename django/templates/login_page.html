@@ -1,0 +1,173 @@
+{% block content %}
+
+    <!DOCTYPE html>
+    <html lang="zh">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>SubmitTool</title>
+        <style>
+            body {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                margin: 0;
+            }
+
+            #login-container {
+                width: 320px;
+                height: 100%;
+                background-color: #f1f1f1;
+                border: 10px solid #4CAF50;
+                border-radius: 10px;
+            }
+
+            #header {
+                text-align: center;
+                padding: 5px;
+                background-color: #4CAF50;
+                color: white;
+            }
+
+            #login-types {
+                text-align: center;
+                background-color: #4CAF50;
+                color: white;
+                padding-bottom: 20px;
+            }
+
+            img {
+                width: 300px;
+                height: 300px;
+                margin: 10px;
+            }
+
+            #phone-form {
+                padding: 10px;
+                text-align: center;
+            }
+
+            #login-bt {
+                width: 100px;
+                height: 30px;
+                margin: 10px;
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                cursor: pointer;
+            }
+
+            #timeout_info {
+                text-align: center;
+                color: red;
+                padding-bottom: 10px;
+                display: none;
+            }
+
+            #footer {
+                text-align: center;
+                background-color: #4CAF50;
+                color: white;
+                height: 35px;
+                line-height: 40px;
+            }
+
+        </style>
+    </head>
+    <body>
+    <div id="login-container">
+        <div id="header">
+            <p style="margin: 0; padding: 5px 0 10px">微信报名工具提交脚本</p>
+        </div>
+        <div id="login-types">
+            <label for="login-type">选择登录方式:</label>
+            <select id="login-type" onchange="toggleLoginType()">
+                <option value="qr-code">二维码登录</option>
+                <option value="phone">手机号登录</option>
+            </select>
+        </div>
+
+        <div id="qr-code">
+            <img src="data:image/jpeg;base64,{{ qr_image }}" alt="QR Code" id="qr-code-image">
+        </div>
+
+        <div id="phone-form" hidden="hidden">
+            <label>
+                <input type="text" id="phone-number" placeholder="手机号">
+                <br>
+                <input type="password" id="password" placeholder="密码">
+            </label>
+            <br>
+            <button id="login-bt" onclick="login()">登录</button>
+        </div>
+        <p id="timeout_info">二维码已过期，请刷新页面重新扫描！</p>
+
+        <div id="footer">
+            Powered by <a href="https://github.com/Tongrens/SubmitTool">Tongrens</a>
+        </div>
+    </div>
+
+    <script>
+        function toggleLoginType() {
+            const loginType = document.getElementById("login-type").value;
+            if (loginType === "qr-code") {
+                document.getElementById("qr-code").style.display = "block";
+                document.getElementById("phone-form").style.display = "none";
+            } else {
+                document.getElementById("qr-code").style.display = "none";
+                document.getElementById("phone-form").style.display = "block";
+            }
+        }
+
+        function login() {
+            const phone = document.getElementById("phone-number").value;
+            const password = document.getElementById("password").value;
+            // 判断手机号和密码是否为空
+            if (!phone || !password) {
+                alert("手机号或密码不能为空！");
+                return;
+            }
+            fetch(`/check_phone_login/?phone=${phone}&password=${password}/`)
+                .then(response => response.json())
+                .then(data => {
+                    const correctValue = data.correct_value;
+                    const token = data.token;
+                    const msg = data.msg;
+                    if (correctValue) {
+                        console.log('登录成功！')
+                        window.location.href = "/dashboard/?token=" + encodeURIComponent(token);
+                    } else {
+                        console.log(msg);
+                        alert(msg)
+                    }
+                })
+        }
+
+        // 模拟二维码扫描成功后的跳转
+        function checkCorrectValue() {
+            // 发送Ajax请求获取后端的值
+            fetch('/check_qr_login/?code={{ code }}/')
+                .then(response => response.json())
+                .then(data => {
+                    const correctValue = data.correct_value;
+                    const token = data.token;
+                    if (correctValue) {
+                        console.log('登录成功！')
+                        window.location.href = "/dashboard/?token=" + encodeURIComponent(token);
+                    } else {
+                        if (count++ > 20) {
+                            document.getElementById("timeout_info").style.display = "block";
+                            return;
+                        }
+                        setTimeout(checkCorrectValue, 3000);
+                    }
+                })
+        }
+
+        // 开始轮询
+        let count = 0;
+        checkCorrectValue();
+    </script>
+    </body>
+{% endblock %}
