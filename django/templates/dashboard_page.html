@@ -59,7 +59,7 @@
                 text-align: center;
             }
 
-            .editableList .input_div {
+            .input_div {
                 width: 100%;
                 height: 100%;
                 float: left;
@@ -76,14 +76,15 @@
                 border: 5px solid #fff2ff;
             }
 
-            #text_box .textbox_info {
+            .textbox_info {
                 text-align: left;
                 padding-left: 10px;
                 background-color: #fff2ff;
                 margin: 0;
                 height: 30px;
-                line-height: 25px;
+                line-height: 35px;
                 font-weight: bold;
+                font-size: 13px;
             }
 
             .tooltip {
@@ -108,8 +109,9 @@
                 text-align: center;
                 background-color: #4CAF50;
                 color: white;
-                height: 40px;
+                height: 30px;
                 line-height: 40px;
+                font-size: 13px;
             }
 
         </style>
@@ -117,6 +119,7 @@
     <body>
     {% if not token %}
         <script>
+            // 检测是否非法跳转dashboard
             alert("请先登录")
             window.location.href = "/login"
         </script>
@@ -127,13 +130,15 @@
         </div>
         <div id="eid">
             <form id="dataForm">
+                <!-- 跨域请求需要添加csrf_token -->
                 {% csrf_token %}
-
+                <!-- 判断是否有历史数据 -->
                 {% if history_data %}
                     <div class="top_div">
                         <span>请选择需要提交的报名：</span>
                     </div>
                     <div class="bottom_div">
+                        <!-- 遍历历史数据 -->
                         {% for item in history_data %}
                             <div>
                                 <label>
@@ -145,15 +150,14 @@
                     </div>
                 {% else %}
                     <script>
-                        alert("请将需要提交的报名添加到个人记录中再重新登录")
+                        alert("请将需要提交的报名添加到”我的记录“中再重新登录")
                         window.location.href = "/login"
                     </script>
                 {% endif %}
             </form>
         </div>
-
         <div class="editableList">
-            <!-- 初始化已有的数据 -->
+            <!-- 显示已有的数据 -->
             <div class="top_div">
                 <span>请确认已保存信息：</span>
             </div>
@@ -176,7 +180,7 @@
             </div>
         </div>
         <button style="display: block;margin: 0 auto" onclick="addItem()">新增一条</button>
-
+        <!-- 是否自动填写 -->
         <div id="container_info" style="text-align: right; padding: 10px">
             <label>
                 <input type="checkbox" name="fill_flag" value=True>若出现已保存信息外的内容是否提交时手动填写
@@ -186,15 +190,16 @@
                 </div>
             </label>
         </div>
+        <p id="submitinfo" style="text-align: right; padding-right: 20px; display: none">提交中...</p>
         <button id="submitbtn" style="display: block;margin: 10px auto" onclick="submitForm()">提交</button>
-        <div id="text_box">
-            <p class="textbox_info">信息输出框：</p>
-        </div>
+        <p class="textbox_info">信息输出框：</p>
+        <div id="text_box"></div>
         <div id="footer">
             Powered by <a href="https://github.com/Tongrens/SubmitTool">Tongrens</a>
         </div>
     </div>
     <script>
+        // 处理自动填写的提示框
         const tooltipTrigger = document.querySelector('.tooltip-trigger');
         const tooltip = document.getElementById('myTooltip');
         tooltipTrigger.addEventListener('mouseover', function () {
@@ -208,14 +213,16 @@
         tooltipTrigger.addEventListener('mouseout', function () {
             tooltip.style.display = 'none';
         });
+        document.getElementsByName("selectedData")[0].checked = true;
 
+        // 提交表单
         function submitForm() {
             const selectedValue = document.querySelector('input[name="selectedData"]:checked');
             if (selectedValue) {
-                // 获取选中的值，可以进行后续处理，比如发送到后端
-                // 构建字典
-                const extra_info = {};
-                let auto_fill_flag = false;
+                const token = '{{ token }}';    // token
+                const eid = selectedValue.value;    // 提交的报名的eid
+                const extra_info = {};  // 用户已保存的信息
+                let auto_fill_flag = false; // 是否自动填写
                 if (document.querySelector('input[name="fill_flag"]:checked')) {
                     auto_fill_flag = true;
                 }
@@ -231,18 +238,12 @@
                         }
                     }
                 });
-                const eid = selectedValue.value;
-                const token = '{{ token }}';
                 console.log('Token:', token);
                 console.log('EID:', eid);
                 console.log('User data:', extra_info);
                 console.log('Auto fill flag:', auto_fill_flag);
                 document.getElementById('submitbtn').style.display = 'none';
-                const submit_info = document.createElement('p');
-                submit_info.innerText = '提交中...';
-                submit_info.style.textAlign = 'right';
-                submit_info.style.paddingRight = '20px';
-                document.getElementById('container_info').appendChild(submit_info);
+                document.getElementById('submitinfo').style.display = 'block';
                 sendDataToBackend({token, eid, extra_info, auto_fill_flag});
             } else {
                 alert("请选择一个要提交的报名");
@@ -250,36 +251,34 @@
             }
         }
 
+        // 克隆模板并显示
         function addItem() {
-            // 克隆模板并显示
             const template = document.getElementById('template');
             const newItem = template.cloneNode(true);
             newItem.style.display = 'block';
-            // 将新元素添加到列表
             document.getElementsByClassName('editableList')[0].appendChild(newItem);
         }
 
+        // 删除父元素
         function removeItem(button) {
-            // 删除父元素
             const item = button.parentNode;
             item.parentNode.removeChild(item);
         }
 
+        // 增加输出信息
         function addInfo(info) {
-            // 增加输出信息
+            console.log(info)
             const newInfo = document.createElement('p');
             newInfo.innerText = info;
             newInfo.style.textAlign = 'center';
             document.getElementById('text_box').appendChild(newInfo);
         }
 
+        // 使用Ajax发送数据到后端
         function sendDataToBackend(data) {
-            // 使用Ajax发送数据到后端
             fetch('/submit/', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify(data)
             })
                 .then(response => response.json())
@@ -290,14 +289,13 @@
                     console.log('sta:', sta, 'msg:', msg);
                     if (sta === true) {
                         if (msg === '活动期间，只允许提交1次') {
-                            console.log('活动期间，只允许提交1次');
                             addInfo('活动期间，只允许提交1次')
                         } else if (msg === '需要手动填写信息') {
-                            console.log('需要手动填写信息！！！');
-                            addInfo('需要手动填写信息！！！')
+                            addInfo('补充需要手动填写的信息再按上方提交按钮！！！')
                             const need_fill = data.need_fill;
                             const items = document.createElement('div');
                             items.setAttribute('class', 'editableList')
+                            // 显示需要手动填写的信息
                             for (let i = 0; i < need_fill.length; i++) {
                                 const item = document.createElement('div');
                                 const label = document.createElement('label');
@@ -310,39 +308,37 @@
                                 value.setAttribute('type', 'text');
                                 value.setAttribute('name', 'value');
                                 value.setAttribute('placeholder', 'Value');
+                                value.setAttribute('style', 'margin-left: 5px');
+                                item.setAttribute('style', 'text-align: center; padding-top: 5px');
                                 label.appendChild(name);
                                 label.appendChild(value);
                                 item.appendChild(label);
                                 items.appendChild(item);
                             }
-                            document.getElementById('text_box').appendChild(items);
-                            const submit = document.createElement('button');
-                            submit.setAttribute('onclick', 'submitForm()');
-                            submit.setAttribute('style', 'display: block;margin: 10px auto')
-                            submit.innerText = '提交';
-                            document.getElementById('text_box').appendChild(submit);
+                            document.getElementById('container_info').appendChild(items);
+                            document.getElementById('submitbtn').style.display = 'block';
+                            document.getElementById('submitinfo').style.display = 'none';
                         } else {
-                            console.log('提交成功');
-                            addInfo('提交成功');
+                            addInfo(msg);
                             const text_box = document.getElementById('text_box');
                             text_box.scrollTop = text_box.scrollHeight;
                         }
                     } else {
                         if (msg === '报名未开始') {
-                            console.log('报名未开始');
                             addInfo('报名未开始');
                         } else {
-                            console.log('提交失败：', msg);
                             addInfo('提交失败：' + msg);
                         }
                         const text_box = document.getElementById('text_box');
                         text_box.scrollTop = text_box.scrollHeight;
-                        setTimeout(sendDataToBackend(old_data), 500);
+                        // 等待并递归
+                        setTimeout(function () {
+                            sendDataToBackend(old_data);
+                        }, 500);
                     }
                 });
         }
     </script>
-
     </body>
     </html>
 

@@ -10,9 +10,9 @@ base_url = 'https://api-xcx-qunsou.weiyoubot.cn/xcx/enroll'
 
 def get_history_data(request):
     token = request.GET.get('token')
-    if not token:
+    result = json.loads(requests.get(f'{base_url}/v1/user/history?access_token={token}').text)
+    if result['sta'] != 0:
         return render(request, 'dashboard_page.html')
-    result = json.loads(requests.get(f'{base_url}/v1/user/history?access_token=' + token).text)
     history_data, extra_info = [], {}
     # 获取历史记录
     for i in result['data']:
@@ -49,19 +49,18 @@ def put_info(request):
         return JsonResponse({'sta': False, 'msg': '获取数据失败，将再次获取', 'data': data})
     for i in info['data']['req_info']:
         # 判断是否需要在提交时手动填写
-        tmp = ''
         if i['field_name'] in extra_info:
             tmp = extra_info[i['field_name']]
         else:
-            if not auto_fill_flag:
-                tmp = '12345678910'
-            else:
-                need_fill.append(i['field_name'])
+            need_fill.append(i['field_name'])
+            min_length = i.get('min_length')
+            tmp = '1' * min_length if min_length else '13066668888'
         # 构造提交的字典
         req_info.append({"field_name": i['field_name'], "field_value": tmp,
                          "field_key": i["field_key"]})
     if not req_info:
-        return JsonResponse({'sta': False, 'msg': '报名未开始', 'data': data})
+        return JsonResponse(
+            {'sta': False, 'msg': f'{time.strftime("%H:%M:%S", time.localtime())} 报名未开始', 'data': data})
     if need_fill and auto_fill_flag:
         return JsonResponse({'sta': True, 'msg': '需要手动填写信息', 'data': data, 'need_fill': need_fill})
     # 提交数据
@@ -70,7 +69,8 @@ def put_info(request):
     return_info = json.loads(requests.post(f'{base_url}/v5/enroll', json=body).text)
     if not return_info['sta']:  # 提交成功返回的sta为0，不成功为-1
         print(access_token, time.strftime("%H:%M:%S", time.localtime()) + '提交成功！')
-        return JsonResponse({'sta': True, 'msg': time.strftime("%H:%M:%S", time.localtime()) + '提交成功！'})
+        msgs = f'\n{"、".join(need_fill)}已自动填写，请尽快登录小程序修改！' if need_fill else ''
+        return JsonResponse({'sta': True, 'msg': f'{time.strftime("%H:%M:%S", time.localtime())} 提交成功！{msgs}'})
     else:
         if return_info['msg'] == '活动期间，只允许提交1次':  # 超过限制为已提交，不需要再次运行
             return JsonResponse({'sta': True, 'msg': '活动期间，只允许提交1次'})

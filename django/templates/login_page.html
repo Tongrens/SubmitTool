@@ -1,5 +1,4 @@
 {% block content %}
-
     <!DOCTYPE html>
     <html lang="zh">
     <head>
@@ -42,6 +41,14 @@
                 margin: 10px;
             }
 
+            .code_info {
+                text-align: center;
+                background-color: #4CAF50;
+                color: red;
+                font-size: 13px;
+                margin: -10px 0 0;
+            }
+
             #phone-form {
                 padding: 10px;
                 text-align: center;
@@ -58,7 +65,7 @@
                 cursor: pointer;
             }
 
-            #timeout_info {
+            .timeout_info {
                 text-align: center;
                 color: red;
                 padding-bottom: 10px;
@@ -69,8 +76,9 @@
                 text-align: center;
                 background-color: #4CAF50;
                 color: white;
-                height: 35px;
+                height: 30px;
                 line-height: 40px;
+                font-size: 13px;
             }
 
         </style>
@@ -83,15 +91,24 @@
         <div id="login-types">
             <label for="login-type">选择登录方式:</label>
             <select id="login-type" onchange="toggleLoginType()">
-                <option value="qr-code">二维码登录</option>
+                <option value="wxqr-code">微信登录</option>
+                <option value="qr-code">公众号登录</option>
                 <option value="phone">手机号登录</option>
             </select>
         </div>
-
+        <!-- 二维码微信登录 -->
+        <div id="wxqr-code" hidden="hidden">
+            <p class="code_info">此模式不允许在微信中长按扫码登录！</p>
+            <img src="data:image/jpeg;base64,{{ wxqr_image }}" alt="QR Code" id="wxqr-code-image">
+        </div>
+        <p class="timeout_info">二维码已过期，请刷新页面重新扫描！</p>
+        <!-- 二维码公众号登录 -->
         <div id="qr-code">
+            <p class="code_info">微信扫码登录后请返回本页面！</p>
             <img src="data:image/jpeg;base64,{{ qr_image }}" alt="QR Code" id="qr-code-image">
         </div>
-
+        <p class="timeout_info">二维码已过期，请刷新页面重新扫描！</p>
+        <!-- 手机号登录 -->
         <div id="phone-form" hidden="hidden">
             <label>
                 <input type="text" id="phone-number" placeholder="手机号">
@@ -99,28 +116,46 @@
                 <input type="password" id="password" placeholder="密码">
             </label>
             <br>
-            <button id="login-bt" onclick="login()">登录</button>
+            <button id="login-bt" onclick="phone_login()">登录</button>
         </div>
-        <p id="timeout_info">二维码已过期，请刷新页面重新扫描！</p>
-
         <div id="footer">
             Powered by <a href="https://github.com/Tongrens/SubmitTool">Tongrens</a>
         </div>
     </div>
 
     <script>
+        // 判断是否在微信中打开
+        function isWeixinBrowser() {
+            const ua = navigator.userAgent.toLowerCase();
+            if (/micromessenger/.test(ua)) {
+                document.getElementById('login-type').value = "qr-code";
+                toggleLoginType();
+            } else {
+                document.getElementById('login-type').value = "wxqr-code";
+                toggleLoginType();
+            }
+        }
+
+        // 切换登录方式
         function toggleLoginType() {
             const loginType = document.getElementById("login-type").value;
-            if (loginType === "qr-code") {
+            if (loginType === "wxqr-code") {
+                document.getElementById("wxqr-code").style.display = "block";
+                document.getElementById("qr-code").style.display = "none";
+                document.getElementById("phone-form").style.display = "none";
+            } else if (loginType === "qr-code") {
+                document.getElementById("wxqr-code").style.display = "none";
                 document.getElementById("qr-code").style.display = "block";
                 document.getElementById("phone-form").style.display = "none";
             } else {
+                document.getElementById("wxqr-code").style.display = "none";
                 document.getElementById("qr-code").style.display = "none";
                 document.getElementById("phone-form").style.display = "block";
             }
         }
 
-        function login() {
+        // 手机号登录
+        function phone_login() {
             const phone = document.getElementById("phone-number").value;
             const password = document.getElementById("password").value;
             // 判断手机号和密码是否为空
@@ -145,29 +180,31 @@
         }
 
         // 模拟二维码扫描成功后的跳转
-        function checkCorrectValue() {
+        function checkCorrectValue(code, uuid) {
             // 发送Ajax请求获取后端的值
-            fetch('/check_qr_login/?code={{ code }}/')
+            fetch(`/check_qr_login/?code=${code}&uuid=${uuid}/`)
                 .then(response => response.json())
                 .then(data => {
                     const correctValue = data.correct_value;
                     const token = data.token;
                     if (correctValue) {
                         console.log('登录成功！')
+                        // 登录成功后带着token跳转到dashboard页面
                         window.location.href = "/dashboard/?token=" + encodeURIComponent(token);
                     } else {
-                        if (count++ > 20) {
-                            document.getElementById("timeout_info").style.display = "block";
-                            return;
+                        if (count++ > 200) {
+                            document.getElementsByClassName("timeout_info")[0].style.display = "block";
+                            document.getElementsByClassName("timeout_info")[1].style.display = "block";
                         }
-                        setTimeout(checkCorrectValue, 3000);
+                        checkCorrectValue('{{ code }}', '{{ uuid }}')
                     }
                 })
         }
 
+        isWeixinBrowser();
         // 开始轮询
         let count = 0;
-        checkCorrectValue();
+        checkCorrectValue('{{ code }}', '{{ uuid }}');
     </script>
     </body>
 {% endblock %}

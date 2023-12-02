@@ -47,8 +47,11 @@ class SubmitTool:
             return False
         for i in info['data']['req_info']:
             # 判断是否需要在提交时手动填写
-            tmp = self.extra_info[i['field_name']] if i['field_name'] in self.extra_info else \
-                ('12345678910' if self.auto_fill_flag else input(f"请输入{i['field_name']}："))
+            if i['field_name'] in self.extra_info:
+                tmp = self.extra_info[i['field_name']]
+            else:
+                min_length = i.get('min_length')
+                tmp = '1' * min_length if min_length else '13066668888'
             # 构造提交的字典
             self.req_info.append({"field_name": i['field_name'], "field_value": tmp,
                                   "field_key": i["field_key"]})
