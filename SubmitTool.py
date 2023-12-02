@@ -90,6 +90,10 @@ class GetToken:
         self.qr_login_url = f'{base_url}_web/v1/pc_login?code='
         self.phone_login_url = f'{base_url}/v1/login_by_phone'
         self.get_history_url = f'{base_url}/v1/user/history?access_token='
+        self.get_wx_qr_url = 'https://open.weixin.qq.com/connect/qrconnect?appid=wx8b6c33d344f46d19&' \
+                             'scope=snsapi_login&redirect_uri=https%3A%2F%2Fbaominggongju.com%2Findex.html'
+        self.check_wxqr_url = 'https://lp.open.weixin.qq.com/connect/l/qrconnect?uuid='
+        self.get_wx_qr_token = f'{base_url}_web/v1/login'
 
     # 通过qr码方式登录
     def get_token_qr(self):
@@ -105,6 +109,36 @@ class GetToken:
                 return login_data['data']['access_token']
             print('等待登录...')
             time.sleep(1)
+
+    # 通过微信扫码方式登录
+    def get_token_wx_qr(self):
+        wx_qr_data = requests.get(self.get_wx_qr_url).text
+        login_flag = False
+        # 获取登录二维码
+        img_url = wx_qr_data.split('class="qrcode lightBorder" src="')[1].split('"')[0]
+        uuid = img_url.split('qrcode/')[1]
+        image = Image.open(BytesIO(requests.get(f'{"https://open.weixin.qq.com"}{img_url}').content))
+        print('请使用微信扫码登录')
+        image.show()
+        while True:
+            # 获取登录状态和wx的token
+            try:
+                check_wxqr_data = requests.get(f'{self.check_wxqr_url}{uuid}', timeout=1).text
+            except requests.exceptions.ReadTimeout:
+                check_wxqr_data = ''
+            if 'window.wx_errcode=405' in check_wxqr_data:
+                print('登录成功！')
+                wxqr_token = check_wxqr_data.split("window.wx_code='")[1].split("'")[0]
+                break
+            if not login_flag and 'window.wx_errcode=404' in check_wxqr_data:
+                print('请点击允许登录')
+                login_flag = True
+            if not login_flag:
+                print('等待登录...')
+            time.sleep(1)
+        # 获取access_token
+        res = json.loads(requests.post(self.get_wx_qr_token, json={"code": wxqr_token, 'source': 'pc'}).text)
+        return res['data']['access_token']
 
     # 通过手机号及密码方式登录
     def get_token_phone(self):
@@ -122,11 +156,14 @@ class GetToken:
     def main(self):
         # 登录
         while True:
-            login_type = input('请选择登录方式(1.二维码登录 2.手机号登录)：')
+            login_type = input('请选择登录方式(1.二维码微信登录 2.二维码公众号登录 3.手机号登录)：')
             if login_type == '1':
+                token = self.get_token_wx_qr()
+                break
+            elif login_type == '2':
                 token = self.get_token_qr()
                 break
-            if login_type == '2':
+            elif login_type == '3':
                 token = self.get_token_phone()
                 break
             print('输入错误，请重新输入')
@@ -137,7 +174,8 @@ class GetToken:
         history_data = []
         for i in result['data']:
             if i['status'] < 2:  # status状态码：0(未开始) 1(进行中) 2(已截至)
-                history_data.append({'name': i['title'], 'status': '进行中' if i['status'] else '未开始', 'eid': i['eid']})
+                history_data.append(
+                    {'name': i['title'], 'status': '进行中' if i['status'] else '未开始', 'eid': i['eid']})
         if not history_data:
             print('请将需要提交的报名添加到个人记录中再运行程序')
             return
